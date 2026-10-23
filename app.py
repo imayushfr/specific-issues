@@ -28,6 +28,9 @@ if st.button("Fetch repository details", type="primary"):
         except Exception as e:
             st.error(str(e))
 
+# Retreiving state key
+data = st.session_state.get("repo_data")
+
 if data:
     st.subheader(data["name"])
 
@@ -41,7 +44,7 @@ if data:
     c2.metric("Open issues fetched", len(data["issues"]))
 
     st.write("### Languages")
-    st.json(data["languages"])  # st.bar_chart
+    st.bar_chart(data["languages"])
 
     st.write("### Open Issues")
 
@@ -59,8 +62,8 @@ if data:
 
     if rows:
         st.dataframe(
-            pd.Dataframe(rows),
-            use_container_width=True,
+            pd.DataFrame(rows),
+            width="stretch",
             hide_index=True,
             column_config={"URL": st.column_config.LinkColumn("Issue link")}
         )
