@@ -18,7 +18,7 @@ def parse_repo_url(repo_url: str) -> tuple[str, str]:
     if "//" in parsed.path:
         raise ValueError("Invalid repository URL.")
 
-    parts = parsed.path.split("/")[:-1]
+    parts = parsed.path.strip("/").split("/")
     if len(parts) < 2:
         raise ValueError("URL must include owner's and repository's name.")
 
@@ -41,8 +41,10 @@ def get_session():
     session.headers.update({
         # HTTP header: JSON response
         "Accept": "application/vnd.github+json",
-        "X-GitHub-Api-Version": "2022-03-10",
+        "X-GitHub-Api-Version": "2022-11-28",  # Mistake2: Didn't used correct version
     })
+
+    return session  # Mistake1
 
 # Get data from API endpoint
 def github_get(session, endpoint, params=None):
@@ -74,7 +76,7 @@ def fetch_repo(repo_url: str) -> dict:
     session = get_session()
     # API's URLs structure
     path = f"/repos/{owner}/{repo}"
-
+    
     details = github_get(session, path)
 
     issues = github_get(
@@ -98,7 +100,7 @@ def fetch_repo(repo_url: str) -> dict:
         "description": details.get("description"),
         "url": details["html_url"],
         "stars": details["stargazers_count"],
-        "default_branch": details["default_branch"],
+        # "default_branch": details["default_branch"],
         "languages": languages,
         "issues": issues,
     }
