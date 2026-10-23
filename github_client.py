@@ -151,7 +151,7 @@ def fetch_user_repo_details(repo):
 
     extensions = sorted({
         PurePosixPath(path).suffix.lower()
-        for path in file_paths:
+        for path in file_paths
         if PurePosixPath(path).suffix
     })
 
@@ -176,4 +176,5 @@ def fetch_user_repo_details(repo):
                 if PurePosixPath(path).name.lower() in manifest_names]
 
     dependencies = {}
+
 
