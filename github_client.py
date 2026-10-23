@@ -6,6 +6,7 @@ import requests
 
 BASE_URL = "https://api.github.com"
 
+# Parse URL
 def parse_repo_url(repo_url: str) -> tuple[str, str]:
     parsed = urlparse(repo_url.strip())
 
@@ -33,6 +34,7 @@ def parse_repo_url(repo_url: str) -> tuple[str, str]:
 
     return owner, repo
 
+# Make a session
 def get_session():
     session = requests.Session()
     # Sets default HTTP instructions for every request in that session
@@ -42,6 +44,7 @@ def get_session():
         "X-GitHub-Api-Version": "2022-03-10",
     })
 
+# Get data from API endpoint
 def github_get(session, endpoint, params=None):
     response = session.get(
         f"{BASE_URL}{endpoint}",
@@ -74,3 +77,28 @@ def fetch_repo(repo_url: str) -> dict:
 
     details = github_get(session, path)
 
+    issues = github_get(
+        session, 
+        f"{path}/issues",
+        params={
+            "state": "open",
+            "per_page": 100,
+            "sort": "updated",
+            "direction": "desc"
+        }
+    )
+
+    # Removing pull requests from issues response
+    issues = [issue for issue in issues if "pull_request" not in issue]
+    ## Returns dict
+    languages = github_get(session, f"{path}/languages")
+
+    return {
+        "name": details["full_name"],
+        "description": details.get("description"),
+        "url": details["html_url"],
+        "stars": details["stargazers_count"],
+        "default_branch": details["default_branch"],
+        "languages": languages,
+        "issues": issues,
+    }
