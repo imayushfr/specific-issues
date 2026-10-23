@@ -1,6 +1,7 @@
-import os
 import re  # Regex
 from urllib.parse import urlparse
+import base64
+from pathlib import PurePosixPath
 
 import requests
 
@@ -104,3 +105,75 @@ def fetch_repo(repo_url: str) -> dict:
         "languages": languages,
         "issues": issues,
     }
+
+# Using GitHub's Link HTTP header, read by request library
+def fetch_till_end(session, url, params):
+    repos = []
+    while url:
+        # Sends HTTP GET request
+        r = session.get(url, params=params, timeout=20)
+        r.raise_for_status()
+        repos.extend(r.json())
+        # Get next link from header (Only url)
+        url = r.links.get("next", {}).get("url")
+        params=None  # Next URL already has the query string
+
+    return repos
+
+def fetch_user_repos(username: str) -> list[dict]:
+    session = get_session()
+    url = f"{BASE_URL}/users/{username}/repos"
+    params = {"per_page": 100, "sort": "updated", "type": "owner"}
+    return fetch_till_end(session, url, params)
+
+def fetch_user_repo_details(repo):
+    full_name = repo["full_name"]
+    base = f"/repos/{full_name}"
+
+    session = get_session()
+
+    details = github_get(session, base)
+
+    languages = github_get(session, f"{base}/languages")
+    topics = details.get("topics", [])
+
+    file_tree = github_get(
+        session,
+        f"{base}/git/trees/{details['default_branch']}",
+        params={"recursive": "1"}
+    )
+
+    file_paths = [
+        item["path"]
+        for item in file_tree.get("tree", [])
+        if item["type"] == "blob"
+    ]
+
+    extensions = sorted({
+        PurePosixPath(path).suffix.lower()
+        for path in file_paths:
+        if PurePosixPath(path).suffix
+    })
+
+    readme = ""
+    try:
+        readme_data = github_get(session, f"{base}/readme")
+        readme = base64.b64decode(
+            readme_data["content"]
+        ).decode("utf-8", errors="replace")
+
+    except Exception:
+        pass
+
+    commits = github_get(session, f"{base}/commits", params={"per_page": 30})
+    manifest_names = {
+        "requirements.txt", "pyproject.toml", "pipfile",
+        "package.json", "cargo.toml", "go.mod",
+        "pom.xml", "build.gradle", "cmakelists.txt"
+    }
+
+    manifests = [path for path in file_paths
+                if PurePosixPath(path).name.lower() in manifest_names]
+
+    dependencies = {}
+
