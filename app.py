@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 
-from github_client import fetch_repo
+from github_client import fetch_repo, fetch_user_repos
 
 # REMINDER for myself: Use Rubberducking
 
@@ -69,4 +69,28 @@ if data:
         )
     else:
         st.info("No open issues found.")
+
+# For user profile
+username = st.text_input(
+    "Enter your GitHub username",
+    placeholder="Username"
+    )
+
+if st.button("Fetch repositories details"):
+    if not username.strip():
+        st.warning("Enter an username.")
+    else:
+        try:
+            with st.spinner("Fetching repositories details..."):
+                repos = fetch_user_repos(username)
+
+            # Persist state under dict key
+            st.session_state["repos"] = repos
+            st.success("Repositories details fetched succesfully.")
+
+        except Exception as e:
+            st.error(str(e))
+
+repos = st.session_state.get("repos")
+
 
